@@ -1,0 +1,7 @@
+django
+djangorestframework
+djoser
+pillow
+exifread
+celery
+redis
