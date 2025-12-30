@@ -33,3 +33,7 @@ media/
 
 # MacOS system files
 .DS_Store
+
+# 临时readme
+*.md
+*.txt

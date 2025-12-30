@@ -37,10 +37,47 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+    'corsheaders',  # CORS 支持
+    'rest_framework',  # Django REST Framework
+    'rest_framework.authtoken',
+    'djoser',  # djoser 提供用户管理的功能
+    'apps.users',  # users app
 ]
+
+# 配置 Django REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',  # 使用 Token 认证
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',  # 需要登录用户才能访问
+    ),
+}
+
+# 配置 djoser 用户认证
+DJOSER = {
+    'USER_CREATE_PASSWORD_RETYPE': True,  # 用户创建时需要确认密码
+    'LOGIN_FIELD': 'username',  # 登录字段可以使用 username 或 email
+    'SERIALIZERS': {
+        'user_create': 'djoser.serializers.UserCreateSerializer',  # 注册时使用的序列化器
+        'user': 'djoser.serializers.UserSerializer',  # 用户信息获取的序列化器
+    },
+}
+
+# 配置 CORS
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # Vite 开发服务器
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",  # 备用端口
+    "http://127.0.0.1:3000",
+]
+
+CORS_ALLOW_CREDENTIALS = True
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # CORS 中间件
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
