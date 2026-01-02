@@ -10,17 +10,41 @@
           </template>
 
           <div v-if="userStore.user" class="welcome-content">
-            <el-empty description="功能开发中...">
-              <template #default>
-                <div class="welcome-message">
-                  <h2>欢迎，{{ userStore.user.username }}！</h2>
-                  <p>图片管理系统已经为您准备好了</p>
-                  <p style="font-size: 14px; color: #909399">
-                    您可以在个人中心管理您的账户信息
-                  </p>
-                </div>
-              </template>
-            </el-empty>
+            <div class="welcome-message">
+              <h2>欢迎，{{ userStore.user.username }}！</h2>
+              <p>图片管理系统已经为您准备好了</p>
+            </div>
+            
+            <el-row :gutter="20" class="quick-actions">
+              <el-col :xs="24" :sm="12" :md="6">
+                <el-card shadow="hover" class="action-card" @click="$router.push('/gallery')">
+                  <el-icon size="48" color="#409eff"><PictureFilled /></el-icon>
+                  <h3>图片库</h3>
+                  <p>浏览所有公开图片</p>
+                </el-card>
+              </el-col>
+              <el-col :xs="24" :sm="12" :md="6">
+                <el-card shadow="hover" class="action-card" @click="$router.push('/upload')">
+                  <el-icon size="48" color="#67c23a"><Upload /></el-icon>
+                  <h3>上传图片</h3>
+                  <p>支持拖拽上传</p>
+                </el-card>
+              </el-col>
+              <el-col :xs="24" :sm="12" :md="6">
+                <el-card shadow="hover" class="action-card" @click="$router.push('/my-images')">
+                  <el-icon size="48" color="#e6a23c"><Picture /></el-icon>
+                  <h3>我的图片</h3>
+                  <p>管理我的图片</p>
+                </el-card>
+              </el-col>
+              <el-col :xs="24" :sm="12" :md="6">
+                <el-card shadow="hover" class="action-card" @click="$router.push('/profile')">
+                  <el-icon size="48" color="#909399"><User /></el-icon>
+                  <h3>个人中心</h3>
+                  <p>管理账户信息</p>
+                </el-card>
+              </el-col>
+            </el-row>
           </div>
         </el-card>
       </el-col>
@@ -28,34 +52,31 @@
 
     <el-row :gutter="20" style="margin-top: 20px">
       <el-col :xs="24" :sm="12" :md="6">
-        <el-statistic title="用户名" :value="userStore.user?.username || '-'" />
+        <el-card shadow="hover">
+          <el-statistic title="用户名" :value="userStore.user?.username || '-'" />
+        </el-card>
       </el-col>
       <el-col :xs="24" :sm="12" :md="6">
-        <el-statistic
-          title="邮箱"
-          :value="userStore.user?.email || '-'"
-          style="width: 100%"
-        />
+        <el-card shadow="hover">
+          <el-statistic title="邮箱" :value="userStore.user?.email || '-'" />
+        </el-card>
       </el-col>
       <el-col :xs="24" :sm="12" :md="6">
-        <el-statistic
-          title="用户ID"
-          :value="userStore.user?.id || '-'"
-          style="width: 100%"
-        />
+        <el-card shadow="hover">
+          <el-statistic title="用户ID" :value="userStore.user?.id || '-'" />
+        </el-card>
       </el-col>
       <el-col :xs="24" :sm="12" :md="6">
-        <el-statistic
-          title="账户状态"
-          :value="userStore.user ? '活跃' : '未登录'"
-          style="width: 100%"
-        />
+        <el-card shadow="hover">
+          <el-statistic title="账户状态" :value="userStore.user ? '活跃' : '未登录'" />
+        </el-card>
       </el-col>
     </el-row>
   </div>
 </template>
 
 <script setup>
+import { Upload, Picture, User, PictureFilled } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/userStore'
 
 const userStore = useUserStore()
@@ -79,16 +100,42 @@ const userStore = useUserStore()
 }
 
 .welcome-message {
-  margin-top: 20px;
+  margin-bottom: 30px;
 }
 
 .welcome-message h2 {
-  margin: 20px 0 10px 0;
+  margin: 0 0 10px 0;
   color: #333;
 }
 
 .welcome-message p {
   color: #666;
-  margin: 10px 0;
+  margin: 0;
+}
+
+.quick-actions {
+  margin-top: 20px;
+}
+
+.action-card {
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.3s, box-shadow 0.3s;
+  margin-bottom: 20px;
+}
+
+.action-card:hover {
+  transform: translateY(-5px);
+}
+
+.action-card h3 {
+  margin: 15px 0 10px 0;
+  color: #333;
+}
+
+.action-card p {
+  margin: 0;
+  color: #909399;
+  font-size: 14px;
 }
 </style>

@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'djoser',  # djoser 提供用户管理的功能
     'apps.users',  # users app
+    'apps.images',  # images app
+    'apps.tags',  # tags app
 ]
 
 # 配置 Django REST Framework
@@ -155,6 +157,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# Media files (uploaded images)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field

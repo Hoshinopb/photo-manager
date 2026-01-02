@@ -10,8 +10,12 @@
           mode="horizontal"
           class="header-menu"
           v-if="userStore.isAuthenticated"
+          router
         >
           <el-menu-item index="/">首页</el-menu-item>
+          <el-menu-item index="/gallery">图片库</el-menu-item>
+          <el-menu-item index="/upload">上传图片</el-menu-item>
+          <el-menu-item index="/my-images">我的图片</el-menu-item>
           <el-menu-item index="/profile">个人中心</el-menu-item>
         </el-menu>
         <div class="header-right">

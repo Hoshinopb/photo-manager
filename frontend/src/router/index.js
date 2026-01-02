@@ -4,6 +4,10 @@ import Home from '../views/Home.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import Profile from '../views/Profile.vue'
+import Upload from '../views/Upload.vue'
+import MyImages from '../views/MyImages.vue'
+import Gallery from '../views/Gallery.vue'
+import ImageDetail from '../views/ImageDetail.vue'
 
 const routes = [
   {
@@ -28,6 +32,30 @@ const routes = [
     path: '/profile',
     name: 'Profile',
     component: Profile,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/upload',
+    name: 'Upload',
+    component: Upload,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/my-images',
+    name: 'MyImages',
+    component: MyImages,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/gallery',
+    name: 'Gallery',
+    component: Gallery,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/image/:id',
+    name: 'ImageDetail',
+    component: ImageDetail,
     meta: { requiresAuth: true },
   },
 ]
