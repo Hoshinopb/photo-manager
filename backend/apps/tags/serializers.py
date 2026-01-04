@@ -5,14 +5,24 @@ from .models import Tag
 class TagSerializer(serializers.ModelSerializer):
     """标签序列化器"""
     image_count = serializers.SerializerMethodField()
+    usage_count = serializers.SerializerMethodField()
     
     class Meta:
         model = Tag
-        fields = ['id', 'name', 'type', 'color', 'created_at', 'image_count']
+        fields = ['id', 'name', 'type', 'color', 'created_at', 'image_count', 'usage_count']
         read_only_fields = ['id', 'created_at']
     
     def get_image_count(self, obj):
         """获取使用该标签的图片数量"""
+        # 优先使用 annotated 的 usage_count（如果有的话）
+        if hasattr(obj, 'usage_count'):
+            return obj.usage_count
+        return obj.images.count()
+    
+    def get_usage_count(self, obj):
+        """获取使用次数 - 优先使用 annotated 的值"""
+        if hasattr(obj, 'usage_count'):
+            return obj.usage_count
         return obj.images.count()
 
 

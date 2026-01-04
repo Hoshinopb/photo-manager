@@ -9,6 +9,7 @@ export const useUserStore = defineStore('user', () => {
   const error = ref(null)
 
   const isAuthenticated = computed(() => !!token.value)
+  const isAdmin = computed(() => user.value?.is_staff || user.value?.is_superuser || false)
 
   // 登录
   const login = async (username, password) => {
@@ -125,6 +126,7 @@ export const useUserStore = defineStore('user', () => {
     loading,
     error,
     isAuthenticated,
+    isAdmin,
     login,
     register,
     logout,

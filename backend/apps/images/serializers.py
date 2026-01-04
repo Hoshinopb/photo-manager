@@ -19,6 +19,7 @@ class ImageSerializer(serializers.ModelSerializer):
     """图片序列化器"""
     owner_username = serializers.CharField(source='owner.username', read_only=True)
     file_url = serializers.SerializerMethodField()
+    thumbnail_url = serializers.SerializerMethodField()
     tags = TagSerializer(many=True, read_only=True)
     tag_list = serializers.SerializerMethodField()
     exif_info = serializers.SerializerMethodField()
@@ -26,13 +27,14 @@ class ImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Image
         fields = [
-            'id', 'filename', 'file', 'file_url', 'size', 
+            'id', 'filename', 'file', 'file_url', 'thumbnail_url',
+            'thumbnail_generated', 'processing_status', 'size', 
             'width', 'height', 'upload_time', 'is_public', 
             'description', 'owner', 'owner_username',
             'tags', 'tag_list', 'exif_info', 'exif_parsed',
             'exif_datetime'
         ]
-        read_only_fields = ['id', 'owner', 'size', 'width', 'height', 'upload_time', 'filename', 'exif_parsed']
+        read_only_fields = ['id', 'owner', 'size', 'width', 'height', 'upload_time', 'filename', 'exif_parsed', 'thumbnail_generated', 'processing_status']
     
     def get_file_url(self, obj):
         """获取完整的文件URL"""
@@ -40,6 +42,14 @@ class ImageSerializer(serializers.ModelSerializer):
         if obj.file and request:
             return request.build_absolute_uri(obj.file.url)
         return None
+    
+    def get_thumbnail_url(self, obj):
+        """获取缩略图URL"""
+        request = self.context.get('request')
+        if obj.thumbnail and obj.thumbnail_generated and request:
+            return request.build_absolute_uri(obj.thumbnail.url)
+        # 如果没有缩略图，返回原图URL作为备选
+        return self.get_file_url(obj)
     
     def get_tag_list(self, obj):
         """获取标签名称列表"""
@@ -118,23 +128,34 @@ class ImageUploadSerializer(serializers.ModelSerializer):
             width=width,
             height=height,
             is_public=validated_data.get('is_public', False),
-            description=validated_data.get('description', '')
+            description=validated_data.get('description', ''),
+            processing_status='pending'  # 初始状态为等待处理
         )
         
-        # 解析 EXIF 并自动生成标签
-        from .exif_utils import apply_exif_to_image
-        try:
-            apply_exif_to_image(image)
-        except Exception as e:
-            print(f"EXIF 解析失败: {e}")
-        
-        # 添加用户指定的标签
+        # 添加用户指定的标签（同步处理，因为用户需要立即看到）
         if user_tags:
             from apps.tags.models import Tag
             for tag_name in user_tags:
                 tag = Tag.get_or_create_tag(tag_name.strip(), tag_type='user')
                 if not ImageTag.objects.filter(image=image, tag=tag).exists():
                     ImageTag.objects.create(image=image, tag=tag)
+        
+        # 触发异步处理任务（缩略图生成、EXIF解析、AI标注）
+        try:
+            from .tasks import process_image_async
+            process_image_async.delay(image.id)
+        except Exception as e:
+            # 如果 Celery 不可用，则同步处理作为降级方案
+            print(f"异步任务触发失败，使用同步处理: {e}")
+            from .exif_utils import apply_exif_to_image
+            try:
+                apply_exif_to_image(image)
+                image.processing_status = 'completed'
+                image.save(update_fields=['processing_status'])
+            except Exception as ex:
+                print(f"同步 EXIF 解析失败: {ex}")
+                image.processing_status = 'failed'
+                image.save(update_fields=['processing_status'])
         
         return image
 

@@ -7,6 +7,9 @@
       </template>
       <template #extra>
         <el-button-group v-if="image && isOwner">
+          <el-button type="warning" @click="openEditor">
+            <el-icon><Edit /></el-icon> 编辑
+          </el-button>
           <el-button @click="handleParseExif" :loading="parsingExif">
             解析EXIF
           </el-button>
@@ -214,6 +217,14 @@
         </el-col>
       </el-row>
     </div>
+
+    <!-- 图片编辑器 -->
+    <ImageEditor
+      v-model="editorVisible"
+      :image="image"
+      @saved="onEditorSaved"
+      @saved-as-new="onEditorSavedAsNew"
+    />
   </div>
 </template>
 
@@ -221,10 +232,11 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Picture, Loading, Download, Link } from '@element-plus/icons-vue'
+import { Picture, Loading, Download, Link, Edit } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/userStore'
 import { getImageDetail, updateImage, deleteImage } from '../utils/imageApi'
 import { addTagToImage, removeTagFromImage, parseImageExif } from '../utils/tagApi'
+import ImageEditor from '../components/ImageEditor.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -237,6 +249,7 @@ const updating = ref(false)
 const newTagName = ref('')
 const addingTag = ref(false)
 const parsingExif = ref(false)
+const editorVisible = ref(false)
 
 const editForm = reactive({
   description: '',
@@ -247,6 +260,22 @@ const isOwner = computed(() => {
   return userStore.user && image.value && image.value.owner === userStore.user.id
 })
 
+// 打开图片编辑器
+const openEditor = () => {
+  editorVisible.value = true
+}
+
+// 编辑保存后刷新图片
+const onEditorSaved = (updatedImage) => {
+  // 刷新当前图片
+  fetchImage()
+}
+
+// 另存为新图片后返回我的图片页面
+const onEditorSavedAsNew = (newImage) => {
+  ElMessage.success('已另存为新图片')
+  router.push('/my-images')
+}
 // 获取标签类型对应的颜色
 const getTagType = (type) => {
   const typeMap = {
@@ -447,7 +476,13 @@ onMounted(() => {
 
 .main-image {
   width: 100%;
-  min-height: 400px;
+  min-height: 300px;
+  max-height: 70vh;
+}
+
+.main-image :deep(img) {
+  object-fit: contain !important;
+  max-width: 100%;
   max-height: 70vh;
 }
 
@@ -503,5 +538,113 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+/* 移动端适配 */
+@media screen and (max-width: 768px) {
+  .image-detail-container {
+    padding: 12px;
+  }
+
+  .page-header {
+    margin-bottom: 15px;
+  }
+
+  .page-header :deep(.el-page-header__content) {
+    font-size: 16px;
+  }
+
+  /* 操作按钮适配 */
+  .page-header :deep(.el-page-header__extra) {
+    margin-top: 12px;
+  }
+
+  .page-header :deep(.el-button-group) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .page-header :deep(.el-button-group .el-button) {
+    margin-left: 0 !important;
+    border-radius: 4px !important;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .detail-content {
+    margin-top: 15px;
+  }
+
+  .main-image {
+    min-height: 200px;
+    max-height: 50vh;
+  }
+
+  .main-image :deep(img) {
+    max-height: 50vh;
+  }
+
+  .image-placeholder,
+  .image-error {
+    min-height: 200px;
+  }
+
+  .image-card,
+  .tags-card,
+  .info-card,
+  .exif-card,
+  .desc-card {
+    margin-bottom: 12px;
+  }
+
+  .tags-container {
+    gap: 6px;
+  }
+
+  .add-tag-section :deep(.el-input-group) {
+    flex-wrap: wrap;
+  }
+
+  .action-card :deep(.el-card__body) {
+    gap: 8px;
+  }
+
+  .action-card :deep(.el-button) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .truncate-text {
+    max-width: 150px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .image-detail-container {
+    padding: 8px;
+  }
+
+  .page-title {
+    font-size: 15px;
+  }
+
+  .main-image {
+    min-height: 150px;
+    max-height: 40vh;
+  }
+
+  .main-image :deep(img) {
+    max-height: 40vh;
+  }
+
+  .image-placeholder,
+  .image-error {
+    min-height: 150px;
+  }
+
+  .truncate-text {
+    max-width: 100px;
+  }
 }
 </style>

@@ -8,13 +8,14 @@ import Upload from '../views/Upload.vue'
 import MyImages from '../views/MyImages.vue'
 import Gallery from '../views/Gallery.vue'
 import ImageDetail from '../views/ImageDetail.vue'
+import Admin from '../views/Admin.vue'
 
 const routes = [
   {
     path: '/',
     name: 'Home',
     component: Home,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: false },
   },
   {
     path: '/login',
@@ -58,6 +59,12 @@ const routes = [
     component: ImageDetail,
     meta: { requiresAuth: true },
   },
+  {
+    path: '/admin',
+    name: 'Admin',
+    component: Admin,
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
 ]
 
 const router = createRouter({
@@ -79,6 +86,9 @@ router.beforeEach(async (to, from, next) => {
     next('/login')
   } else if ((to.name === 'Login' || to.name === 'Register') && userStore.isAuthenticated) {
     // 已登录用户重定向到首页
+    next('/')
+  } else if (to.meta.requiresAdmin && !userStore.isAdmin) {
+    // 需要管理员权限但用户不是管理员
     next('/')
   } else {
     next()

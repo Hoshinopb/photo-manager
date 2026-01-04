@@ -11,6 +11,13 @@ def image_upload_path(instance, filename):
     return os.path.join('uploads', f'user_{instance.owner.id}', new_filename)
 
 
+def thumbnail_upload_path(instance, filename):
+    """生成缩略图上传路径：thumbnails/user_{id}/{uuid}_thumb.jpg"""
+    ext = 'jpg'  # 缩略图统一使用 jpg 格式
+    name_without_ext = os.path.splitext(filename)[0]
+    return os.path.join('thumbnails', f'user_{instance.owner.id}', f"{name_without_ext}.{ext}")
+
+
 class Image(models.Model):
     """图片模型"""
     
@@ -26,6 +33,27 @@ class Image(models.Model):
     file = models.ImageField(
         upload_to=image_upload_path,
         verbose_name='图片文件'
+    )
+    thumbnail = models.ImageField(
+        upload_to=thumbnail_upload_path,
+        blank=True,
+        default='',
+        verbose_name='缩略图'
+    )
+    thumbnail_generated = models.BooleanField(
+        default=False,
+        verbose_name='缩略图已生成'
+    )
+    processing_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', '等待处理'),
+            ('processing', '处理中'),
+            ('completed', '已完成'),
+            ('failed', '处理失败'),
+        ],
+        default='pending',
+        verbose_name='处理状态'
     )
     filename = models.CharField(
         max_length=255,

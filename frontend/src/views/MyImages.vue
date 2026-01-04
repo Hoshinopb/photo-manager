@@ -184,7 +184,7 @@
             <template #default="{ row }">
               <el-image
                 style="width: 50px; height: 50px"
-                :src="row.file_url"
+                :src="row.thumbnail_url || row.file_url"
                 :preview-src-list="[row.file_url]"
                 fit="cover"
                 preview-teleported
@@ -198,6 +198,14 @@
             </template>
           </el-table-column>
           
+          <el-table-column label="处理" width="70" align="center">
+            <template #default="{ row }">
+              <el-icon v-if="row.processing_status === 'pending' || row.processing_status === 'processing'" class="is-loading" color="#E6A23C"><Loading /></el-icon>
+              <el-icon v-else-if="row.processing_status === 'completed'" color="#67C23A"><Select /></el-icon>
+              <el-icon v-else-if="row.processing_status === 'failed'" color="#F56C6C"><CloseBold /></el-icon>
+            </template>
+          </el-table-column>
+          
           <el-table-column
             prop="filename"
             label="文件名"
@@ -207,10 +215,10 @@
             show-overflow-tooltip
           />
           
-          <el-table-column label="标签" min-width="140">
+          <el-table-column label="标签" width="120">
             <template #default="{ row }">
               <el-tag
-                v-for="tag in (row.tags || []).slice(0, 2)"
+                v-for="tag in (row.tags || []).slice(0, 1)"
                 :key="tag.id"
                 size="small"
                 :type="getTagType(tag.type)"
@@ -219,8 +227,8 @@
               >
                 {{ tag.name }}
               </el-tag>
-              <span v-if="row.tags && row.tags.length > 2" class="more-tags">
-                +{{ row.tags.length - 2 }}
+              <span v-if="row.tags && row.tags.length > 1" class="more-tags">
+                +{{ row.tags.length - 1 }}
               </span>
             </template>
           </el-table-column>
@@ -264,27 +272,30 @@
             </template>
           </el-table-column>
           
-          <el-table-column label="状态" width="70" align="center">
+          <el-table-column label="公开" width="60" align="center">
             <template #default="{ row }">
-              <el-tag :type="row.is_public ? 'success' : 'info'" size="small">
-                {{ row.is_public ? '公开' : '私有' }}
-              </el-tag>
+              <el-icon v-if="row.is_public" color="#67C23A"><View /></el-icon>
+              <el-icon v-else color="#909399"><Hide /></el-icon>
             </template>
           </el-table-column>
           
-          <el-table-column label="操作" width="160" fixed="right">
+          <el-table-column label="操作" width="180" fixed="right" align="center">
             <template #default="{ row }">
-              <el-button type="primary" size="small" text @click="goToDetail(row)">
-                详情
-              </el-button>
-              <el-button size="small" text @click="togglePublic(row)">
-                {{ row.is_public ? '私有' : '公开' }}
-              </el-button>
-              <el-popconfirm title="确定删除？" @confirm="handleDelete(row)">
-                <template #reference>
-                  <el-button type="danger" size="small" text>删除</el-button>
-                </template>
-              </el-popconfirm>
+              <el-button-group size="small">
+                <el-button type="primary" @click.stop="goToDetail(row)">
+                  <el-icon><View /></el-icon>
+                </el-button>
+                <el-button :type="row.is_public ? 'warning' : 'success'" @click.stop="togglePublic(row)">
+                  <el-icon><component :is="row.is_public ? Hide : View" /></el-icon>
+                </el-button>
+                <el-popconfirm title="确定删除？" @confirm="handleDelete(row)">
+                  <template #reference>
+                    <el-button type="danger" @click.stop>
+                      <el-icon><Delete /></el-icon>
+                    </el-button>
+                  </template>
+                </el-popconfirm>
+              </el-button-group>
             </template>
           </el-table-column>
         </el-table>
@@ -305,7 +316,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, Picture, Refresh, Delete, View, Hide, Search } from '@element-plus/icons-vue'
+import { Plus, Picture, Refresh, Delete, View, Hide, Search, Loading, Select, CloseBold } from '@element-plus/icons-vue'
 import { getMyImages, deleteImage, updateImage } from '../utils/imageApi'
 import { getMyTags } from '../utils/tagApi'
 
@@ -769,5 +780,84 @@ onMounted(() => {
 
 :deep(.el-table .el-table__header th:hover) {
   background-color: #ecf5ff;
+}
+
+/* 移动端适配 */
+@media screen and (max-width: 768px) {
+  .my-images-container {
+    padding: 12px;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .card-header .el-button {
+    width: 100%;
+  }
+
+  .filter-bar :deep(.el-col) {
+    margin-bottom: 8px;
+  }
+
+  .filter-actions {
+    justify-content: flex-start;
+  }
+
+  .batch-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .batch-actions .el-button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* 表格适配 */
+  .image-list :deep(.el-table) {
+    font-size: 12px;
+  }
+
+  .image-list :deep(.el-table th),
+  .image-list :deep(.el-table td) {
+    padding: 8px 4px;
+  }
+
+  /* 隐藏部分列 */
+  .image-list :deep(.el-table-column--selection) {
+    width: 40px !important;
+  }
+
+  .list-tag {
+    font-size: 10px;
+    max-width: 50px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .refresh-section {
+    margin-top: 15px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .my-images-container {
+    padding: 8px;
+  }
+
+  .page-title {
+    font-size: 16px;
+  }
+
+  /* 更紧凑的表格 */
+  .image-list :deep(.el-table th),
+  .image-list :deep(.el-table td) {
+    padding: 6px 2px;
+  }
 }
 </style>

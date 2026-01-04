@@ -26,6 +26,14 @@
                 <span class="label">ID：</span>
                 <span class="value">{{ userStore.user.id }}</span>
               </div>
+              <div class="info-item">
+                <span class="label">角色：</span>
+                <span class="value">
+                  <el-tag v-if="userStore.user.is_superuser" type="danger" effect="dark">超级管理员</el-tag>
+                  <el-tag v-else-if="userStore.user.is_staff" type="warning" effect="dark">管理员</el-tag>
+                  <el-tag v-else type="info">普通用户</el-tag>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -326,5 +334,77 @@ onMounted(() => {
 .info-item .value {
   flex: 1;
   word-break: break-all;
+}
+
+/* 移动端适配 */
+@media screen and (max-width: 768px) {
+  .profile-container {
+    padding: 12px;
+  }
+
+  .profile-card {
+    margin-bottom: 15px;
+  }
+
+  .avatar :deep(.el-avatar) {
+    width: 60px !important;
+    height: 60px !important;
+  }
+
+  .info-item {
+    flex-direction: column;
+    margin-bottom: 10px;
+  }
+
+  .info-item .label {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+
+  /* 标签页适配 */
+  .el-tabs :deep(.el-tabs__header) {
+    margin-bottom: 10px;
+  }
+
+  .el-tabs :deep(.el-tabs__item) {
+    padding: 0 12px;
+    font-size: 14px;
+  }
+
+  /* 表单适配 */
+  .el-form :deep(.el-form-item__label) {
+    width: 90px !important;
+    font-size: 13px;
+  }
+
+  .el-form :deep(.el-form-item__content) {
+    margin-left: 90px !important;
+  }
+
+  .el-form :deep(.el-form-item:last-child .el-button) {
+    width: 100%;
+    margin-bottom: 8px;
+    margin-left: 0;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .profile-container {
+    padding: 8px;
+  }
+
+  .avatar :deep(.el-avatar) {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  .el-form :deep(.el-form-item__label) {
+    width: 80px !important;
+    font-size: 12px;
+  }
+
+  .el-form :deep(.el-form-item__content) {
+    margin-left: 80px !important;
+  }
 }
 </style>

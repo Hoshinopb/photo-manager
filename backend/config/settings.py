@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -63,7 +64,8 @@ DJOSER = {
     'LOGIN_FIELD': 'username',  # 登录字段可以使用 username 或 email
     'SERIALIZERS': {
         'user_create': 'djoser.serializers.UserCreateSerializer',  # 注册时使用的序列化器
-        'user': 'djoser.serializers.UserSerializer',  # 用户信息获取的序列化器
+        'user': 'apps.users.serializers.CustomUserSerializer',  # 自定义用户序列化器，包含角色信息
+        'current_user': 'apps.users.serializers.CustomUserSerializer',  # 当前用户信息
     },
 }
 
@@ -166,3 +168,19 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# Celery 配置
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Shanghai'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30分钟超时
+
+
+# 缩略图配置
+THUMBNAIL_SIZE = (300, 300)  # 缩略图尺寸
+THUMBNAIL_QUALITY = 85  # JPEG 压缩质量

@@ -31,7 +31,7 @@
             @change="fetchImages"
           >
             <el-option
-              v-for="tag in allTags"
+              v-for="tag in availableTags"
               :key="tag.id"
               :label="tag.name"
               :value="tag.name"
@@ -182,7 +182,7 @@
         >
           <el-card class="image-card" shadow="hover" @click="viewImageDetail(image)">
             <el-image
-              :src="image.file_url"
+              :src="image.thumbnail_url || image.file_url"
               fit="cover"
               class="card-image"
               lazy
@@ -231,7 +231,7 @@
           <template #default="{ row }">
             <el-image
               style="width: 50px; height: 50px"
-              :src="row.file_url"
+              :src="row.thumbnail_url || row.file_url"
               fit="cover"
             >
               <template #error>
@@ -401,6 +401,11 @@ const filters = reactive({
 // 是否有筛选条件
 const hasFilters = computed(() => {
   return filters.search || filters.selectedTags.length > 0 || filters.timeRange || filters.ownerFilter !== 'all'
+})
+
+// 过滤掉 usage_count 为 0 的标签
+const availableTags = computed(() => {
+  return allTags.value.filter(tag => (tag.image_count || tag.usage_count || 0) > 0)
 })
 
 // 根据归属筛选过滤图片
@@ -714,6 +719,14 @@ onMounted(() => {
 
 .image-card :deep(.el-card__body) {
   padding: 0;
+  position: relative;
+}
+
+.processing-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
 }
 
 .card-image {
@@ -810,6 +823,12 @@ onMounted(() => {
   max-height: 65vh;
 }
 
+.detail-image :deep(img) {
+  object-fit: contain !important;
+  max-width: 100%;
+  max-height: 65vh;
+}
+
 .detail-tags {
   margin-top: 16px;
 }
@@ -831,5 +850,100 @@ onMounted(() => {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+/* 移动端适配 */
+@media screen and (max-width: 768px) {
+  .gallery-container {
+    padding: 12px;
+  }
+
+  .filter-card :deep(.el-card__body) {
+    padding: 12px;
+  }
+
+  .filter-card :deep(.el-col) {
+    margin-bottom: 8px;
+  }
+
+  .filter-actions {
+    justify-content: flex-start;
+    margin-top: 8px;
+  }
+
+  .tags-card :deep(.el-card__body) {
+    padding: 12px;
+  }
+
+  .stats-row .el-col {
+    margin-bottom: 8px;
+  }
+
+  .card-image {
+    height: 120px;
+  }
+
+  .card-info {
+    padding: 8px;
+  }
+
+  .card-title {
+    font-size: 12px;
+  }
+
+  .card-meta {
+    font-size: 11px;
+  }
+
+  .card-tags :deep(.el-tag) {
+    font-size: 10px;
+    max-width: 60px;
+  }
+
+  /* 弹窗适配 */
+  .image-detail {
+    padding: 5px 0;
+  }
+
+  .detail-image {
+    max-height: 50vh;
+  }
+
+  .detail-image :deep(img) {
+    max-height: 50vh;
+  }
+
+  .detail-actions {
+    justify-content: center;
+  }
+
+  .detail-actions .el-button {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* 表格视图在移动端隐藏部分列 */
+  .list-view :deep(.el-table__header),
+  .list-view :deep(.el-table__body) {
+    font-size: 12px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .gallery-container {
+    padding: 8px;
+  }
+
+  .card-image {
+    height: 100px;
+  }
+
+  .stat-card :deep(.el-statistic__head) {
+    font-size: 11px;
+  }
+
+  .stat-card :deep(.el-statistic__number) {
+    font-size: 18px !important;
+  }
 }
 </style>

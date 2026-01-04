@@ -192,4 +192,36 @@ const formatError = (error) => {
   font-weight: bold;
   color: #333;
 }
+
+/* 移动端适配 */
+@media screen and (max-width: 768px) {
+  .register-container {
+    padding: 20px;
+    min-height: calc(100vh - 50px);
+  }
+
+  .register-card {
+    max-width: 100%;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+
+  .register-card :deep(.el-form-item__label) {
+    font-size: 14px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .register-container {
+    padding: 15px;
+    align-items: flex-start;
+    padding-top: 40px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+}
 </style>

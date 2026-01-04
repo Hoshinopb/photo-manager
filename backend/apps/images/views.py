@@ -151,6 +151,14 @@ class ImageViewSet(viewsets.ModelViewSet):
             'all_public': public_images.count(),
         })
     
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def random(self, request):
+        """获取随机公开图片（用于首页轮播，无需登录）"""
+        count = int(request.query_params.get('count', 6))
+        images = Image.objects.filter(is_public=True).order_by('?')[:count]
+        serializer = self.get_serializer(images, many=True)
+        return Response(serializer.data)
+    
     def create(self, request, *args, **kwargs):
         """上传新图片"""
         serializer = self.get_serializer(data=request.data)
@@ -280,6 +288,99 @@ class ImageViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=True, methods=['post'])
+    def edit(self, request, pk=None):
+        """
+        图片编辑 API
+        
+        支持的操作：
+        - crop: 裁剪 {x, y, width, height}
+        - rotate: 旋转 {angle: 90, 180, 270, -90}
+        - flip: 翻转 {direction: 'horizontal' | 'vertical'}
+        - brightness: 亮度调整 {value: -100 ~ 100}
+        - contrast: 对比度调整 {value: -100 ~ 100}
+        - saturation: 饱和度调整 {value: -100 ~ 100}
+        - save_as_new: 是否保存为新图片 (默认覆盖原图)
+        """
+        image = self.get_object()
+        
+        if image.owner != request.user:
+            return Response(
+                {'detail': '您没有权限编辑此图片'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        from .image_editor import ImageEditor
+        
+        try:
+            editor = ImageEditor(image)
+            
+            # 处理裁剪
+            crop_data = request.data.get('crop')
+            if crop_data:
+                editor.crop(
+                    x=int(crop_data.get('x', 0)),
+                    y=int(crop_data.get('y', 0)),
+                    width=int(crop_data.get('width')),
+                    height=int(crop_data.get('height'))
+                )
+            
+            # 处理旋转
+            rotate_data = request.data.get('rotate')
+            if rotate_data:
+                angle = int(rotate_data.get('angle', 0))
+                editor.rotate(angle)
+            
+            # 处理翻转
+            flip_data = request.data.get('flip')
+            if flip_data:
+                direction = flip_data.get('direction', 'horizontal')
+                editor.flip(direction)
+            
+            # 处理亮度
+            brightness = request.data.get('brightness')
+            if brightness is not None:
+                editor.adjust_brightness(float(brightness.get('value', 0)))
+            
+            # 处理对比度
+            contrast = request.data.get('contrast')
+            if contrast is not None:
+                editor.adjust_contrast(float(contrast.get('value', 0)))
+            
+            # 处理饱和度
+            saturation = request.data.get('saturation')
+            if saturation is not None:
+                editor.adjust_saturation(float(saturation.get('value', 0)))
+            
+            # 保存
+            save_as_new = request.data.get('save_as_new', False)
+            if save_as_new:
+                new_image = editor.save_as_new(request.user)
+                serializer = ImageSerializer(new_image, context={'request': request})
+                return Response({
+                    'detail': '图片已保存为新图片',
+                    'image': serializer.data
+                }, status=status.HTTP_201_CREATED)
+            else:
+                editor.save()
+                image.refresh_from_db()
+                serializer = ImageSerializer(image, context={'request': request})
+                return Response({
+                    'detail': '图片编辑成功',
+                    'image': serializer.data
+                })
+        
+        except ValueError as e:
+            return Response(
+                {'detail': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {'detail': f'图片编辑失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class MyImagesViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -294,3 +395,133 @@ class MyImagesViewSet(viewsets.ReadOnlyModelViewSet):
         """获取当前用户的所有图片"""
         return Image.objects.filter(owner=self.request.user).select_related('owner').prefetch_related('tags')
 
+
+class IsAdminUser(permissions.BasePermission):
+    """检查用户是否为管理员"""
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)
+
+
+class AdminImageViewSet(viewsets.ModelViewSet):
+    """
+    管理员图片管理视图集
+    
+    只有管理员可以访问，可以管理所有用户的图片
+    """
+    serializer_class = ImageSerializer
+    permission_classes = [IsAdminUser]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    
+    def get_queryset(self):
+        """获取所有图片"""
+        queryset = Image.objects.all().select_related('owner').prefetch_related('tags')
+        
+        # 按用户筛选
+        owner_id = self.request.query_params.get('owner')
+        if owner_id:
+            queryset = queryset.filter(owner_id=owner_id)
+        
+        # 按用户名筛选
+        owner_username = self.request.query_params.get('owner_username')
+        if owner_username:
+            queryset = queryset.filter(owner__username__icontains=owner_username)
+        
+        # 按公开状态筛选
+        is_public = self.request.query_params.get('is_public')
+        if is_public is not None:
+            if is_public.lower() == 'true':
+                queryset = queryset.filter(is_public=True)
+            elif is_public.lower() == 'false':
+                queryset = queryset.filter(is_public=False)
+        
+        # 搜索文件名或描述
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(filename__icontains=search) | Q(description__icontains=search)
+            )
+        
+        # 排序
+        ordering = self.request.query_params.get('ordering', '-upload_time')
+        if ordering in ['upload_time', '-upload_time', 'size', '-size', 'filename', '-filename', 'owner__username', '-owner__username']:
+            queryset = queryset.order_by(ordering)
+        
+        return queryset
+    
+    def destroy(self, request, *args, **kwargs):
+        """管理员删除图片"""
+        instance = self.get_object()
+        
+        # 删除文件
+        if instance.file:
+            instance.file.delete(save=False)
+        if instance.thumbnail:
+            instance.thumbnail.delete(save=False)
+        
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """管理员统计信息"""
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        total_images = Image.objects.count()
+        public_images = Image.objects.filter(is_public=True).count()
+        private_images = Image.objects.filter(is_public=False).count()
+        total_users = User.objects.count()
+        
+        # 每个用户的图片数量
+        from django.db.models import Count
+        user_stats = User.objects.annotate(
+            image_count=Count('images')
+        ).filter(image_count__gt=0).values('id', 'username', 'image_count').order_by('-image_count')[:10]
+        
+        return Response({
+            'total_images': total_images,
+            'public_images': public_images,
+            'private_images': private_images,
+            'total_users': total_users,
+            'top_users': list(user_stats)
+        })
+    
+    @action(detail=False, methods=['get'])
+    def all_users(self, request):
+        """获取所有用户列表"""
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        from django.db.models import Count
+        users = User.objects.annotate(
+            image_count=Count('images')
+        ).values('id', 'username', 'email', 'is_staff', 'is_active', 'image_count')
+        
+        return Response(list(users))
+    
+    @action(detail=False, methods=['delete'])
+    def batch_delete(self, request):
+        """批量删除图片"""
+        ids = request.data.get('ids', [])
+        if not ids:
+            return Response({'detail': '请提供要删除的图片ID'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        images = Image.objects.filter(id__in=ids)
+        count = images.count()
+        
+        for image in images:
+            if image.file:
+                image.file.delete(save=False)
+            if image.thumbnail:
+                image.thumbnail.delete(save=False)
+        
+        images.delete()
+        return Response({'detail': f'成功删除 {count} 张图片'})
+    
+    @action(detail=False, methods=['get'])
+    def random(self, request):
+        """获取随机公开图片（用于首页轮播）"""
+        count = int(request.query_params.get('count', 6))
+        images = Image.objects.filter(is_public=True).order_by('?')[:count]
+        serializer = self.get_serializer(images, many=True)
+        return Response(serializer.data)

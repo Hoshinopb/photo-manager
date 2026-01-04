@@ -263,4 +263,74 @@ const goToMyImages = () => {
   font-size: 14px;
   margin-top: 10px;
 }
+
+/* 移动端适配 */
+@media screen and (max-width: 768px) {
+  .upload-container {
+    padding: 12px;
+  }
+
+  .upload-area :deep(.el-upload-dragger) {
+    padding: 30px 20px;
+  }
+
+  .upload-area :deep(.el-icon--upload) {
+    font-size: 50px !important;
+  }
+
+  .upload-area :deep(.el-upload__text) {
+    font-size: 14px;
+  }
+
+  .upload-options :deep(.el-form-item) {
+    margin-bottom: 15px;
+  }
+
+  .upload-options :deep(.el-form-item__label) {
+    width: 80px !important;
+    font-size: 13px;
+  }
+
+  .option-tip {
+    display: block;
+    margin-left: 0;
+    margin-top: 5px;
+  }
+
+  .upload-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .upload-actions .el-button {
+    width: 100%;
+    margin: 0;
+  }
+
+  /* 结果表格 */
+  .el-table :deep(.el-table__header th),
+  .el-table :deep(.el-table__body td) {
+    padding: 8px 4px;
+    font-size: 13px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .upload-container {
+    padding: 8px;
+  }
+
+  .upload-area :deep(.el-upload-dragger) {
+    padding: 20px 15px;
+  }
+
+  .upload-area :deep(.el-icon--upload) {
+    font-size: 40px !important;
+  }
+
+  .upload-options :deep(.el-form-item__label) {
+    width: 70px !important;
+    font-size: 12px;
+  }
+}
 </style>

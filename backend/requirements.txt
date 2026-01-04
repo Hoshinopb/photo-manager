@@ -6,3 +6,4 @@ pillow
 exifread
 celery
 redis
+gunicorn

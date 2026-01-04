@@ -87,6 +87,23 @@ export const deleteImage = async (id) => {
 }
 
 /**
+ * 编辑图片
+ * @param {number} id - 图片ID
+ * @param {Object} editData - 编辑数据
+ * @param {Object} editData.crop - 裁剪参数 {x, y, width, height}
+ * @param {Object} editData.rotate - 旋转参数 {angle}
+ * @param {Object} editData.flip - 翻转参数 {direction: 'horizontal'|'vertical'}
+ * @param {Object} editData.brightness - 亮度参数 {value: -100~100}
+ * @param {Object} editData.contrast - 对比度参数 {value: -100~100}
+ * @param {Object} editData.saturation - 饱和度参数 {value: -100~100}
+ * @param {boolean} editData.save_as_new - 是否保存为新图片
+ * @returns {Promise}
+ */
+export const editImage = async (id, editData) => {
+  return apiClient.post(`/api/images/${id}/edit/`, editData)
+}
+
+/**
  * 获取公开图片列表
  * @param {Object} params - 查询参数
  * @returns {Promise}

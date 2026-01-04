@@ -130,4 +130,36 @@ const goToRegister = () => {
   font-weight: bold;
   color: #333;
 }
+
+/* 移动端适配 */
+@media screen and (max-width: 768px) {
+  .login-container {
+    padding: 20px;
+    min-height: calc(100vh - 50px);
+  }
+
+  .login-card {
+    max-width: 100%;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+
+  .login-card :deep(.el-form-item__label) {
+    font-size: 14px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .login-container {
+    padding: 15px;
+    align-items: flex-start;
+    padding-top: 60px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+}
 </style>
