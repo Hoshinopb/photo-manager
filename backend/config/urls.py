@@ -17,6 +17,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from apps.users.views import VisionApiKeyView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -24,6 +25,7 @@ urlpatterns = [
     path('auth/', include('djoser.urls.authtoken')),
     path('api/', include('apps.images.urls')),
     path('api/', include('apps.tags.urls')),
+    path('api/user/vision-api-key/', VisionApiKeyView.as_view(), name='vision-api-key'),
 ]
 
 # 开发环境下提供媒体文件服务

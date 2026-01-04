@@ -381,6 +381,171 @@ class ImageViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=True, methods=['post'])
+    def generate_ai_description(self, request, pk=None):
+        """使用 AI 生成图片描述和标签"""
+        image = self.get_object()
+        
+        # 只有图片所有者可以生成描述
+        if image.owner != request.user:
+            return Response(
+                {'detail': '您没有权限操作此图片'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # 检查用户是否设置了 API Key
+        from apps.users.models import UserProfile
+        try:
+            profile = UserProfile.objects.get(user=request.user)
+            if not profile.has_vision_api_key:
+                return Response(
+                    {'detail': '请先在个人设置中配置 Vision API Key'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            api_key = profile.vision_api_key
+        except UserProfile.DoesNotExist:
+            return Response(
+                {'detail': '请先在个人设置中配置 Vision API Key'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 调用 AI 服务生成描述
+        import requests
+        import base64
+        
+        try:
+            # 读取图片并转为 base64
+            with open(image.file.path, 'rb') as f:
+                image_data = base64.b64encode(f.read()).decode('utf-8')
+            
+            # 获取图片格式
+            ext = image.filename.split('.')[-1].lower()
+            if ext == 'jpg':
+                ext = 'jpeg'
+            image_url = f"data:image/{ext};base64,{image_data}"
+            
+            # 构建请求
+            payload = {
+                "model": "deepseek-ai/deepseek-vl2",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": (
+                                    "你是一个专业的图片分析助手。请对用户提供的图片进行分析，生成描述和标签。\n\n"
+                                    "【输出要求】\n"
+                                    "请严格按照以下 JSON 格式输出，不要包含其他内容：\n"
+                                    "{\n"
+                                    '  "description": "图片的详细描述（50-150字）",\n'
+                                    '  "tags": ["标签1", "标签2"]\n'
+                                    "}\n\n"
+                                    "【描述要求】\n"
+                                    "1. 描述图片的主要内容、场景、氛围\n"
+                                    "2. 如果有人物，描述其大致动作或状态\n"
+                                    "3. 描述主要的颜色、光线等视觉特征\n"
+                                    "4. 语言流畅、客观、专业\n\n"
+                                    "【标签要求】\n"
+                                    "1. 提取1-3个最具特征的标签\n"
+                                    "2. 标签应简短（2-4个字）\n"
+                                    "3. 优先选择：场景类型、主体、风格、颜色等\n"
+                                    "4. 示例标签：风景、人像、美食、建筑、夜景、黑白、动物等"
+                                )
+                            }
+                        ]
+                    },
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "请分析这张图片，生成描述和标签。"
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": image_url,
+                                    "detail": "auto"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "stream": False,
+                "max_tokens": 500,
+                "temperature": 0.7,
+                "top_p": 0.7,
+                "response_format": {"type": "text"},
+            }
+            
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.post(
+                "https://api.siliconflow.cn/v1/chat/completions",
+                json=payload,
+                headers=headers,
+                timeout=60
+            )
+            
+            response.raise_for_status()
+            result = response.json()
+            content = result['choices'][0]['message']['content']
+            
+            # 解析 JSON 响应
+            import json
+            import re
+            
+            # 尝试提取 JSON
+            json_match = re.search(r'\{[\s\S]*\}', content)
+            if json_match:
+                ai_result = json.loads(json_match.group())
+            else:
+                ai_result = {"description": content, "tags": []}
+            
+            description = ai_result.get('description', '')
+            tags = ai_result.get('tags', [])
+            
+            # 更新图片描述
+            if description:
+                image.description = description
+                image.save()
+            
+            # 添加 AI 生成的标签
+            from apps.tags.models import Tag
+            added_tags = []
+            for tag_name in tags[:3]:  # 最多3个标签
+                if tag_name and len(tag_name) <= 20:
+                    tag = Tag.get_or_create_tag(tag_name.strip(), tag_type='ai')
+                    if not ImageTag.objects.filter(image=image, tag=tag).exists():
+                        ImageTag.objects.create(image=image, tag=tag)
+                        added_tags.append({'id': tag.id, 'name': tag.name, 'type': 'ai'})
+            
+            return Response({
+                'detail': 'AI 描述生成成功',
+                'description': description,
+                'tags': added_tags
+            })
+            
+        except requests.exceptions.RequestException as e:
+            return Response(
+                {'detail': f'AI 服务请求失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except json.JSONDecodeError:
+            return Response(
+                {'detail': 'AI 响应解析失败'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except Exception as e:
+            return Response(
+                {'detail': f'处理失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class MyImagesViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -492,12 +657,55 @@ class AdminImageViewSet(viewsets.ModelViewSet):
         from django.contrib.auth import get_user_model
         User = get_user_model()
         
+        # 支持搜索
+        search = request.query_params.get('search', '')
+        
         from django.db.models import Count
         users = User.objects.annotate(
             image_count=Count('images')
-        ).values('id', 'username', 'email', 'is_staff', 'is_active', 'image_count')
+        )
+        
+        if search:
+            users = users.filter(username__icontains=search)
+        
+        users = users.values('id', 'username', 'email', 'is_staff', 'is_superuser', 'is_active', 'image_count')
         
         return Response(list(users))
+    
+    @action(detail=False, methods=['post'])
+    def set_staff(self, request):
+        """设置用户为管理员或取消管理员"""
+        # 只有超级管理员可以执行此操作
+        if not request.user.is_superuser:
+            return Response({'detail': '只有超级管理员可以执行此操作'}, status=status.HTTP_403_FORBIDDEN)
+        
+        user_id = request.data.get('user_id')
+        is_staff = request.data.get('is_staff', False)
+        
+        if not user_id:
+            return Response({'detail': '请提供用户ID'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        try:
+            user = User.objects.get(id=user_id)
+            # 不能修改超级管理员的权限
+            if user.is_superuser:
+                return Response({'detail': '不能修改超级管理员的权限'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            user.is_staff = is_staff
+            user.save()
+            return Response({
+                'detail': f'用户 {user.username} 已{"设为" if is_staff else "取消"}管理员',
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'is_staff': user.is_staff
+                }
+            })
+        except User.DoesNotExist:
+            return Response({'detail': '用户不存在'}, status=status.HTTP_404_NOT_FOUND)
     
     @action(detail=False, methods=['delete'])
     def batch_delete(self, request):
@@ -517,11 +725,3 @@ class AdminImageViewSet(viewsets.ModelViewSet):
         
         images.delete()
         return Response({'detail': f'成功删除 {count} 张图片'})
-    
-    @action(detail=False, methods=['get'])
-    def random(self, request):
-        """获取随机公开图片（用于首页轮播）"""
-        count = int(request.query_params.get('count', 6))
-        images = Image.objects.filter(is_public=True).order_by('?')[:count]
-        serializer = self.get_serializer(images, many=True)
-        return Response(serializer.data)

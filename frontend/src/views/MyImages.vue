@@ -54,7 +54,7 @@
           </el-col>
           
           <!-- 标签模式 -->
-          <el-col :xs="12" :sm="4" :md="4">
+          <el-col :xs="12" :sm="4" :md="3">
             <el-select v-model="filters.tagMode" @change="applyFilters">
               <el-option label="包含全部" value="and" />
               <el-option label="包含任一" value="or" />
@@ -63,7 +63,7 @@
           </el-col>
           
           <!-- 公开状态筛选 -->
-          <el-col :xs="12" :sm="4" :md="4">
+          <el-col :xs="12" :sm="4" :md="3">
             <el-select v-model="filters.publicFilter" @change="applyFilters">
               <el-option label="全部状态" value="all" />
               <el-option label="仅公开" value="public" />
@@ -71,7 +71,16 @@
             </el-select>
           </el-col>
           
-          <el-col :xs="24" :sm="24" :md="4" class="filter-actions">
+          <!-- 视图切换和重置 -->
+          <el-col :xs="24" :sm="24" :md="6" class="filter-actions">
+            <el-button-group class="view-mode-group">
+              <el-button :type="viewMode === 'grid' ? 'primary' : 'default'" @click="viewMode = 'grid'">
+                <el-icon><Grid /></el-icon>
+              </el-button>
+              <el-button :type="viewMode === 'list' ? 'primary' : 'default'" @click="viewMode = 'list'">
+                <el-icon><List /></el-icon>
+              </el-button>
+            </el-button-group>
             <el-button @click="resetFilters">重置筛选</el-button>
           </el-col>
         </el-row>
@@ -168,8 +177,87 @@
         共 {{ filteredImages.length }} 张图片
       </div>
 
-      <!-- 图片列表 -->
-      <div v-if="!loading && filteredImages.length > 0" class="image-list">
+      <!-- 网格视图 -->
+      <div v-if="!loading && filteredImages.length > 0 && viewMode === 'grid'" class="image-grid">
+        <el-row :gutter="16">
+          <el-col
+            v-for="image in sortedImages"
+            :key="image.id"
+            :xs="12"
+            :sm="8"
+            :md="6"
+            :lg="4"
+          >
+            <el-card class="image-card" shadow="hover">
+              <div 
+                class="grid-checkbox" 
+                :class="{ 'is-checked': selectedImageIds.includes(image.id) }"
+                @click.stop="toggleImageSelection(image.id)"
+              >
+                <el-icon v-if="selectedImageIds.includes(image.id)"><Check /></el-icon>
+              </div>
+              <div class="card-content" @click="goToDetail(image)">
+                  <el-image
+                    :src="image.thumbnail_url || image.file_url"
+                    fit="cover"
+                    class="card-image"
+                    lazy
+                  >
+                    <template #placeholder>
+                      <div class="image-placeholder">
+                        <el-icon class="is-loading"><Loading /></el-icon>
+                      </div>
+                    </template>
+                    <template #error>
+                      <div class="image-error-grid">
+                        <el-icon><Picture /></el-icon>
+                      </div>
+                    </template>
+                  </el-image>
+                  <div class="card-info">
+                    <div class="card-title" :title="image.filename">{{ image.filename }}</div>
+                    <div class="card-meta">
+                      <span class="file-size">{{ formatFileSize(image.size) }}</span>
+                      <el-icon v-if="image.is_public" color="#67C23A"><View /></el-icon>
+                      <el-icon v-else color="#909399"><Hide /></el-icon>
+                    </div>
+                    <!-- 显示标签 -->
+                    <div v-if="image.tags && image.tags.length > 0" class="card-tags">
+                      <el-tag
+                        v-for="tag in image.tags.slice(0, 2)"
+                        :key="tag.id"
+                        size="small"
+                        :type="getTagType(tag.type)"
+                        effect="plain"
+                      >
+                        {{ tag.name }}
+                      </el-tag>
+                      <span v-if="image.tags.length > 2" class="more-tags">+{{ image.tags.length - 2 }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-actions">
+                  <el-button size="small" type="primary" @click.stop="goToDetail(image)">
+                    <el-icon><View /></el-icon>
+                  </el-button>
+                  <el-button size="small" :type="image.is_public ? 'warning' : 'success'" @click.stop="togglePublic(image)">
+                    <el-icon><component :is="image.is_public ? Hide : View" /></el-icon>
+                  </el-button>
+                  <el-popconfirm title="确定删除？" @confirm="handleDelete(image)">
+                    <template #reference>
+                      <el-button size="small" type="danger" @click.stop>
+                        <el-icon><Delete /></el-icon>
+                      </el-button>
+                    </template>
+                  </el-popconfirm>
+                </div>
+              </el-card>
+            </el-col>
+          </el-row>
+      </div>
+
+      <!-- 图片列表（条状视图） -->
+      <div v-if="!loading && filteredImages.length > 0 && viewMode === 'list'" class="image-list">
         <el-table
           ref="tableRef"
           :data="sortedImages"
@@ -313,10 +401,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, Picture, Refresh, Delete, View, Hide, Search, Loading, Select, CloseBold } from '@element-plus/icons-vue'
+import { Plus, Picture, Refresh, Delete, View, Hide, Search, Loading, Select, CloseBold, Grid, List, Check } from '@element-plus/icons-vue'
 import { getMyImages, deleteImage, updateImage } from '../utils/imageApi'
 import { getMyTags } from '../utils/tagApi'
 
@@ -328,6 +416,31 @@ const loading = ref(true)
 const refreshing = ref(false)
 const selectedImages = ref([])
 const showAllTags = ref(false)
+
+// 视图模式: 'grid' 或 'list'
+const viewMode = ref('list')
+const isMobile = ref(false)
+
+// 用于网格视图的选中 ID 数组
+const selectedImageIds = ref([])
+
+// 检测是否为移动端
+const checkMobile = () => {
+  isMobile.value = window.innerWidth < 768
+  // 移动端默认使用网格视图
+  if (isMobile.value && viewMode.value === 'list') {
+    viewMode.value = 'grid'
+  }
+}
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
+
+// 同步选中状态 - 需要 deep: true 来监听数组内部变化
+watch(selectedImageIds, (ids) => {
+  selectedImages.value = images.value.filter(img => ids.includes(img.id))
+}, { deep: true })
 
 // 筛选条件
 const filters = ref({
@@ -487,7 +600,19 @@ const handleSelectionChange = (selection) => {
 
 // 清除选择
 const clearSelection = () => {
+  selectedImageIds.value = []
+  selectedImages.value = []
   tableRef.value?.clearSelection()
+}
+
+// 网格视图切换选中状态
+const toggleImageSelection = (imageId) => {
+  const index = selectedImageIds.value.indexOf(imageId)
+  if (index === -1) {
+    selectedImageIds.value.push(imageId)
+  } else {
+    selectedImageIds.value.splice(index, 1)
+  }
 }
 
 // 获取图片列表
@@ -620,6 +745,8 @@ const formatDate = (dateStr) => {
 }
 
 onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
   fetchImages()
   fetchMyTags()
 })
@@ -652,7 +779,13 @@ onMounted(() => {
 .filter-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
   margin-top: 12px;
+}
+
+.view-mode-group {
+  flex-shrink: 0;
 }
 
 @media (min-width: 992px) {
@@ -744,6 +877,137 @@ onMounted(() => {
   margin-top: 10px;
 }
 
+/* 网格视图样式 */
+.image-grid {
+  margin-top: 10px;
+}
+
+.image-card {
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.image-card :deep(.el-card__body) {
+  padding: 0;
+}
+
+.grid-checkbox {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 2px solid #dcdfe6;
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.grid-checkbox:hover {
+  border-color: #409eff;
+}
+
+.grid-checkbox.is-checked {
+  background: #409eff;
+  border-color: #409eff;
+}
+
+.grid-checkbox.is-checked .el-icon {
+  color: #fff;
+  font-size: 14px;
+}
+
+.card-content {
+  cursor: pointer;
+}
+
+.card-image {
+  width: 100%;
+  height: 120px;
+  display: block;
+}
+
+.image-placeholder {
+  width: 100%;
+  height: 120px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f5f7fa;
+  color: #909399;
+}
+
+.image-error-grid {
+  width: 100%;
+  height: 120px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f5f7fa;
+  color: #909399;
+  font-size: 24px;
+}
+
+.card-info {
+  padding: 8px;
+}
+
+.card-title {
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 4px;
+}
+
+.card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #909399;
+}
+
+.file-size {
+  flex: 1;
+}
+
+.card-tags {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.card-tags :deep(.el-tag) {
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  padding: 0 4px;
+  height: 18px;
+}
+
+.card-actions {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  border-top: 1px solid #ebeef5;
+}
+
+.card-actions .el-button {
+  flex: 1;
+  margin: 0;
+}
+
 .list-tag {
   margin-right: 4px;
 }
@@ -816,6 +1080,32 @@ onMounted(() => {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+  }
+
+  /* 网格视图在移动端的优化 */
+  .card-image {
+    height: 100px;
+  }
+
+  .image-placeholder,
+  .image-error-grid {
+    height: 100px;
+  }
+
+  .card-info {
+    padding: 6px;
+  }
+
+  .card-title {
+    font-size: 11px;
+  }
+
+  .card-actions {
+    padding: 6px;
+  }
+
+  .card-actions .el-button {
+    padding: 4px 8px;
   }
 
   /* 表格适配 */

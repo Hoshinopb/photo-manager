@@ -252,7 +252,7 @@ const initCropper = () => {
     
     cropper.value = new Cropper(imageRef.value, {
       viewMode: 1,  // 限制图片在容器内
-      dragMode: 'crop',
+      dragMode: 'move',  // 默认拖动图片而非裁剪框
       aspectRatio: NaN,
       autoCropArea: 1,  // 裁剪框默认和图片一样大
       restore: false,
@@ -261,20 +261,60 @@ const initCropper = () => {
       highlight: false,
       cropBoxMovable: true,
       cropBoxResizable: true,
-      toggleDragModeOnDblclick: false,
+      toggleDragModeOnDblclick: true,  // 双击切换拖动模式
       minContainerWidth: containerRect.width || 400,
       minContainerHeight: containerRect.height || 400,
       background: true,
       responsive: true,
       checkCrossOrigin: false,
+      movable: true,  // 允许移动图片
+      zoomable: true, // 允许缩放图片
+      rotatable: true,
+      scalable: true,
       ready() {
-        // Cropper 准备就绪，重置到中心
+        // Cropper 准备就绪，将图片居中到画布中心
         if (cropper.value) {
-          cropper.value.reset()
+          centerImageInContainer()
         }
       }
     })
   }
+}
+
+// 将图片居中到容器中心（基于图片和画布中心，而非裁剪框）
+const centerImageInContainer = () => {
+  if (!cropper.value) return
+  
+  nextTick(() => {
+    if (!cropper.value) return
+    
+    const containerData = cropper.value.getContainerData()
+    const imageData = cropper.value.getImageData()
+    
+    // 如果图片数据无效，跳过
+    if (!imageData.naturalWidth || !imageData.naturalHeight) return
+    
+    // 计算缩放比例，让图片完全在容器内显示（留10%边距）
+    const scaleX = (containerData.width * 0.9) / imageData.naturalWidth
+    const scaleY = (containerData.height * 0.9) / imageData.naturalHeight
+    const scale = Math.min(scaleX, scaleY, 1) // 不放大超过原始尺寸
+    
+    // 计算新尺寸
+    const newWidth = imageData.naturalWidth * scale
+    const newHeight = imageData.naturalHeight * scale
+    
+    // 精确计算居中位置（基于容器中心）
+    const newLeft = Math.round((containerData.width - newWidth) / 2)
+    const newTop = Math.round((containerData.height - newHeight) / 2)
+    
+    // 设置画布（图片）数据，使图片居中
+    cropper.value.setCanvasData({
+      width: newWidth,
+      height: newHeight,
+      left: newLeft,
+      top: newTop
+    })
+  })
 }
 
 // 销毁 Cropper
@@ -354,7 +394,7 @@ const rotate = (angle) => {
   }
 }
 
-// 重置位置 - 居中并缩放图片以适应容器
+// 重置位置 - 居中并缩放图片以适应容器（基于图片和画布中心）
 const resetPosition = () => {
   if (!cropper.value) return
   
@@ -362,24 +402,30 @@ const resetPosition = () => {
     if (!cropper.value) return
     
     const containerData = cropper.value.getContainerData()
-    const canvasData = cropper.value.getCanvasData()
+    const imageData = cropper.value.getImageData()
     
-    // 如果画布数据无效，跳过
-    if (!canvasData.width || !canvasData.height) return
+    // 如果图片数据无效，跳过
+    if (!imageData.naturalWidth || !imageData.naturalHeight) return
+    
+    // 获取当前旋转后的实际尺寸
+    const canvasData = cropper.value.getCanvasData()
+    const currentWidth = canvasData.naturalWidth || imageData.naturalWidth
+    const currentHeight = canvasData.naturalHeight || imageData.naturalHeight
     
     // 计算缩放比例，让图片完全在容器内显示（留10%边距）
-    const scaleX = (containerData.width * 0.9) / canvasData.width
-    const scaleY = (containerData.height * 0.9) / canvasData.height
+    const scaleX = (containerData.width * 0.9) / currentWidth
+    const scaleY = (containerData.height * 0.9) / currentHeight
     const scale = Math.min(scaleX, scaleY)
     
     // 计算新尺寸
-    const newWidth = canvasData.width * scale
-    const newHeight = canvasData.height * scale
+    const newWidth = currentWidth * scale
+    const newHeight = currentHeight * scale
     
-    // 精确计算居中位置
+    // 精确计算居中位置（基于容器中心）
     const newLeft = Math.round((containerData.width - newWidth) / 2)
     const newTop = Math.round((containerData.height - newHeight) / 2)
     
+    // 设置画布数据，使图片居中于画布/容器中心
     cropper.value.setCanvasData({
       width: newWidth,
       height: newHeight,
@@ -681,7 +727,8 @@ onBeforeUnmount(() => {
 .image-wrapper :deep(.cropper-canvas),
 .image-wrapper :deep(.cropper-drag-box),
 .image-wrapper :deep(.cropper-crop-box) {
-  /* 继承父元素的 filter */
+  /* 继承父元素的 filter 样式 */
+  transition: filter 0.2s ease;
 }
 
 :deep(.cropper-view-box) {

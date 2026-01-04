@@ -7,3 +7,4 @@ exifread
 celery
 redis
 gunicorn
+cryptography

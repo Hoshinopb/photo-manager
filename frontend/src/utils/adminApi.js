@@ -11,8 +11,16 @@ export const getAdminStats = () => {
 }
 
 // 管理员获取所有用户
-export const getAdminUsers = () => {
-  return apiClient.get('/api/admin/images/all_users/')
+export const getAdminUsers = (params = {}) => {
+  return apiClient.get('/api/admin/images/all_users/', { params })
+}
+
+// 管理员设置用户为管理员
+export const setUserStaff = (userId, isStaff) => {
+  return apiClient.post('/api/admin/images/set_staff/', {
+    user_id: userId,
+    is_staff: isStaff
+  })
 }
 
 // 管理员删除图片

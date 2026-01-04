@@ -6,7 +6,7 @@
         <span class="page-title">图片详情</span>
       </template>
       <template #extra>
-        <el-button-group v-if="image && isOwner">
+        <div v-if="image && isOwner" class="header-actions">
           <el-button type="warning" @click="openEditor">
             <el-icon><Edit /></el-icon> 编辑
           </el-button>
@@ -21,7 +21,7 @@
               <el-button type="danger">删除</el-button>
             </template>
           </el-popconfirm>
-        </el-button-group>
+        </div>
       </template>
     </el-page-header>
 
@@ -177,7 +177,19 @@
           <!-- 描述编辑 -->
           <el-card class="desc-card">
             <template #header>
-              <span>描述</span>
+              <div class="card-header">
+                <span>描述</span>
+                <el-button 
+                  v-if="isOwner"
+                  type="success" 
+                  size="small"
+                  @click="generateAiDescription"
+                  :loading="generatingAi"
+                >
+                  <el-icon><MagicStick /></el-icon>
+                  AI 生成
+                </el-button>
+              </div>
             </template>
             
             <div v-if="!isOwner && image.description">
@@ -232,11 +244,12 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Picture, Loading, Download, Link, Edit } from '@element-plus/icons-vue'
+import { Picture, Loading, Download, Link, Edit, MagicStick } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/userStore'
 import { getImageDetail, updateImage, deleteImage } from '../utils/imageApi'
 import { addTagToImage, removeTagFromImage, parseImageExif } from '../utils/tagApi'
 import ImageEditor from '../components/ImageEditor.vue'
+import apiClient from '../utils/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -250,6 +263,7 @@ const newTagName = ref('')
 const addingTag = ref(false)
 const parsingExif = ref(false)
 const editorVisible = ref(false)
+const generatingAi = ref(false)
 
 const editForm = reactive({
   description: '',
@@ -415,6 +429,36 @@ const copyLink = async () => {
   }
 }
 
+// AI 生成描述
+const generateAiDescription = async () => {
+  generatingAi.value = true
+  try {
+    const response = await apiClient.post(`/api/images/${image.value.id}/generate_ai_description/`)
+    
+    // 更新描述
+    if (response.data.description) {
+      editForm.description = response.data.description
+      image.value.description = response.data.description
+    }
+    
+    // 添加新标签到显示列表
+    if (response.data.tags && response.data.tags.length > 0) {
+      for (const tag of response.data.tags) {
+        if (!image.value.tags.find(t => t.id === tag.id)) {
+          image.value.tags.push(tag)
+        }
+      }
+    }
+    
+    ElMessage.success('AI 描述生成成功')
+  } catch (err) {
+    const message = err.response?.data?.detail || 'AI 描述生成失败'
+    ElMessage.error(message)
+  } finally {
+    generatingAi.value = false
+  }
+}
+
 // 格式化文件大小
 const formatFileSize = (bytes) => {
   if (!bytes) return '-'
@@ -456,6 +500,12 @@ onMounted(() => {
 .page-title {
   font-size: 18px;
   font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .loading-container {
@@ -554,22 +604,22 @@ onMounted(() => {
     font-size: 16px;
   }
 
-  /* 操作按钮适配 */
+  /* 操作按钮适配 - 每行2个按钮 */
   .page-header :deep(.el-page-header__extra) {
     margin-top: 12px;
+    width: 100%;
   }
 
-  .page-header :deep(.el-button-group) {
-    display: flex;
-    flex-wrap: wrap;
+  .header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
   }
 
-  .page-header :deep(.el-button-group .el-button) {
-    margin-left: 0 !important;
-    border-radius: 4px !important;
-    flex: 1;
-    min-width: 0;
+  .header-actions .el-button {
+    margin: 0;
+    width: 100%;
   }
 
   .detail-content {
@@ -627,6 +677,11 @@ onMounted(() => {
 
   .page-title {
     font-size: 15px;
+  }
+
+  /* 超小屏幕按钮每行1个 */
+  .header-actions {
+    grid-template-columns: 1fr;
   }
 
   .main-image {

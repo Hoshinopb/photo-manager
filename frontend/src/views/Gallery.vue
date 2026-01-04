@@ -69,19 +69,23 @@
           </el-select>
         </el-col>
         
-        <!-- 排序和视图切换 -->
-        <el-col :xs="12" :sm="6" :md="24" :lg="5" class="filter-actions">
-          <el-select v-model="filters.ordering" style="width: 110px" @change="fetchImages">
+        <!-- 排序 -->
+        <el-col :xs="12" :sm="6" :md="4" :lg="2">
+          <el-select v-model="filters.ordering" style="width: 100%" @change="fetchImages">
             <el-option label="最新上传" value="-upload_time" />
             <el-option label="最早上传" value="upload_time" />
             <el-option label="文件最大" value="-size" />
             <el-option label="文件最小" value="size" />
           </el-select>
-          <el-button-group style="margin-left: 8px">
+        </el-col>
+        
+        <!-- 视图切换和重置（手机端单独一行） -->
+        <el-col :xs="24" :sm="6" :md="24" :lg="3" class="filter-actions">
+          <el-button-group class="view-mode-group">
             <el-button :type="viewMode === 'grid' ? 'primary' : ''" @click="viewMode = 'grid'" :icon="Grid" />
             <el-button :type="viewMode === 'list' ? 'primary' : ''" @click="viewMode = 'list'" :icon="List" />
           </el-button-group>
-          <el-button @click="resetFilters" style="margin-left: 8px">重置</el-button>
+          <el-button @click="resetFilters" class="reset-btn">重置</el-button>
         </el-col>
       </el-row>
       
@@ -610,7 +614,16 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 8px;
   margin-top: 12px;
+}
+
+.view-mode-group {
+  flex-shrink: 0;
+}
+
+.reset-btn {
+  flex-shrink: 0;
 }
 
 @media (min-width: 1200px) {
@@ -869,6 +882,11 @@ onMounted(() => {
   .filter-actions {
     justify-content: flex-start;
     margin-top: 8px;
+    width: 100%;
+  }
+
+  .view-mode-group {
+    margin-right: auto;
   }
 
   .tags-card :deep(.el-card__body) {
