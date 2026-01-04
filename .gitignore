@@ -37,3 +37,10 @@ media/
 # 临时readme
 *.md
 *.txt
+
+# log
+logs/
+*.log
+# pid
+pids
+*.pid
