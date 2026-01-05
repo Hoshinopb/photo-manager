@@ -1,6 +1,9 @@
-FROM node:18-alpine as build
+FROM node:20-alpine AS build
 
 WORKDIR /app
+
+# 使用淘宝 npm 镜像（国内加速）
+RUN npm config set registry https://registry.npmmirror.com
 
 # 复制依赖文件
 COPY package*.json ./
