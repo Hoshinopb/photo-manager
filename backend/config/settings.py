@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure--$h(9clt*x_&-639*v4^av3bz7ic$g(nrunx&y+j06f(sd&htk
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']  # Docker 环境下允许所有主机
 
 
 # Application definition
@@ -159,6 +159,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (uploaded images)
 MEDIA_URL = '/media/'
