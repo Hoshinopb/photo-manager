@@ -63,7 +63,8 @@ DJOSER = {
     'USER_CREATE_PASSWORD_RETYPE': True,  # 用户创建时需要确认密码
     'LOGIN_FIELD': 'username',  # 登录字段可以使用 username 或 email
     'SERIALIZERS': {
-        'user_create': 'apps.users.serializers.CustomUserCreateSerializer',  # 自定义注册序列化器，验证邮箱唯一性
+        'user_create': 'apps.users.serializers.CustomUserCreateSerializer',  # 自定义注册序列化器
+        'user_create_password_retype': 'apps.users.serializers.CustomUserCreateSerializer',  # 带密码确认的注册序列化器
         'user': 'apps.users.serializers.CustomUserSerializer',  # 自定义用户序列化器，包含角色信息
         'current_user': 'apps.users.serializers.CustomUserSerializer',  # 当前用户信息
     },

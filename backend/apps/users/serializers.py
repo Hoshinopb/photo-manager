@@ -9,6 +9,7 @@ User = get_user_model()
 
 class CustomUserCreateSerializer(BaseUserCreateSerializer):
     """自定义用户注册序列化器，验证邮箱唯一性"""
+    email = serializers.EmailField(required=True)
     
     class Meta(BaseUserCreateSerializer.Meta):
         fields = BaseUserCreateSerializer.Meta.fields
@@ -18,11 +19,13 @@ class CustomUserCreateSerializer(BaseUserCreateSerializer):
         if not value:
             raise serializers.ValidationError("邮箱不能为空")
         
+        value = value.lower()  # 统一转换为小写
+        
         # 检查邮箱是否已被注册
         if User.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError("该邮箱已被注册")
         
-        return value.lower()  # 统一转换为小写存储
+        return value
 
 
 class CustomUserSerializer(BaseUserSerializer):
