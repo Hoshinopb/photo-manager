@@ -71,12 +71,10 @@ DJOSER = {
 
 # 配置 CORS
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Vite 开发服务器
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",  # 备用端口
-    "http://127.0.0.1:3000",
+    "*", 
 ]
 
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 MIDDLEWARE = [
