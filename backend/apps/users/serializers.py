@@ -1,6 +1,28 @@
 from djoser.serializers import UserSerializer as BaseUserSerializer
+from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
 from rest_framework import serializers
+from django.contrib.auth import get_user_model
 from .models import UserProfile
+
+User = get_user_model()
+
+
+class CustomUserCreateSerializer(BaseUserCreateSerializer):
+    """自定义用户注册序列化器，验证邮箱唯一性"""
+    
+    class Meta(BaseUserCreateSerializer.Meta):
+        fields = BaseUserCreateSerializer.Meta.fields
+    
+    def validate_email(self, value):
+        """验证邮箱唯一性"""
+        if not value:
+            raise serializers.ValidationError("邮箱不能为空")
+        
+        # 检查邮箱是否已被注册
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("该邮箱已被注册")
+        
+        return value.lower()  # 统一转换为小写存储
 
 
 class CustomUserSerializer(BaseUserSerializer):
