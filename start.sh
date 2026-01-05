@@ -6,11 +6,22 @@
 
 set -e
 
-PROJECT_ROOT="/root/photo-manager"
+# 获取脚本所在目录作为项目根目录（支持相对路径）
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$PROJECT_ROOT/backend"
 FRONTEND_DIR="$PROJECT_ROOT/frontend"
 CONDA_ENV="photo"
-CONDA_PATH="/root/miniconda3"
+# 自动检测 conda 安装路径
+if [ -d "$HOME/miniconda3" ]; then
+    CONDA_PATH="$HOME/miniconda3"
+elif [ -d "$HOME/anaconda3" ]; then
+    CONDA_PATH="$HOME/anaconda3"
+elif [ -d "/opt/conda" ]; then
+    CONDA_PATH="/opt/conda"
+else
+    # 尝试从 conda 命令获取路径
+    CONDA_PATH="$(dirname "$(dirname "$(which conda 2>/dev/null)")")" 2>/dev/null || CONDA_PATH=""
+fi
 
 # 颜色输出
 RED='\033[0;31m'

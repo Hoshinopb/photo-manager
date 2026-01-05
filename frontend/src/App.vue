@@ -4,7 +4,7 @@
       <div class="header-content">
         <!-- Logo -->
         <div class="logo" @click="goHome">
-          <span class="logo-text">📷 图片管理</span>
+          <span class="logo-text">图片管理系统</span>
         </div>
 
         <!-- 桌面端导航菜单 -->
@@ -61,7 +61,7 @@
     >
       <template #header>
         <div class="drawer-header">
-          <span class="drawer-title">📷 图片管理</span>
+          <span class="drawer-title">图片管理系统</span>
           <el-icon class="drawer-close" @click="mobileMenuVisible = false"><Close /></el-icon>
         </div>
       </template>
