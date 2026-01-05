@@ -1,43 +1,95 @@
-# Django
-*.log
-*.pot
-*.pyc
-*.pyo
+# ===================
+# Python / Django
+# ===================
+*.py[cod]
+*$py.class
 __pycache__/
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.manifest
+*.spec
+
+# Django 数据库
 db.sqlite3
 *.sqlite3
 
-# Python
-*.pyc
-*.pyo
-*.pyd
-__pycache__/
-
-# Environment variables and secrets
-.env
-*.env
-config/.env
-
-# Virtual environment
-venv/
-env/
-
-# Static files
+# Django 静态文件和媒体文件
 /static/
-
-# Media files (uploaded images)
 media/
 
-# VS Code files
+# ===================
+# Node.js / 前端
+# ===================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# 构建产物
+dist/
+dist-ssr/
+*.local
+
+# ===================
+# 环境和配置
+# ===================
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+
+# 虚拟环境
+venv/
+env/
+.venv/
+ENV/
+
+# ===================
+# Docker
+# ===================
+# 不提交Docker镜像文件
+*.tar
+*.tar.gz
+docker-images/
+
+# ===================
+# IDE 和编辑器
+# ===================
 .vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
 
-# MacOS system files
+# ===================
+# 系统文件
+# ===================
 .DS_Store
+Thumbs.db
 
-# log
+# ===================
+# 日志和运行时文件
+# ===================
 logs/
 *.log
-
-# pid
 pids/
 *.pid
+*.seed
+*.pid.lock
+
+# ===================
+# 测试和缓存
+# ===================
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.tox/
+.cache/
